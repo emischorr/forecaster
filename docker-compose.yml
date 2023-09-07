@@ -1,0 +1,8 @@
+version: "3.7"
+services:
+  phantomjs:
+    image: wernight/phantomjs:latest
+    command: phantomjs --webdriver=8910
+    ports: 
+      - 8910:8910
+    restart: no
