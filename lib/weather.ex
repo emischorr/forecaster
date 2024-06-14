@@ -48,14 +48,17 @@ defmodule Forecaster.Weather do
     current_window_handle() |> set_window_size(600, 800)
     navigate_to(url)
     page_title() |> IO.inspect(label: "title")
-    accept_cookies()
+    maybe_accept_cookies()
     # take_screenshot("debug/loading.png")
   end
 
-  defp accept_cookies do
-    find_element(:id, "gdpr_form")
-    |> find_within_element(:xpath, ~s|//input[@type='submit']|)
-    |> click()
+  defp maybe_accept_cookies do
+    case search_element(:id, "gdpr_form") do
+      {:ok, element} ->
+        find_within_element(element, :xpath, ~s|//input[@type='submit']|)
+        |> click()
+      {:error, _error} -> nil
+    end
   end
 
   defp close(), do: Hound.end_session
