@@ -75,6 +75,7 @@ ARG MIX_ENV
 RUN apk add --no-cache libstdc++ openssl ncurses-libs
 
 ENV USER="elixir"
+ENV LANG de_DE.UTF-8
 
 WORKDIR "/home/${USER}/app"
 
