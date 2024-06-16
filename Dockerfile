@@ -75,6 +75,7 @@ ARG MIX_ENV
 RUN apk add --no-cache libstdc++ openssl ncurses-libs
 
 ENV USER="elixir"
+# exact locale doesn't matter, but en_US gives you temperatures in fahrenheit :-(
 ENV LANG de_DE.UTF-8
 
 WORKDIR "/home/${USER}/app"
