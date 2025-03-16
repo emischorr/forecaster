@@ -7,7 +7,9 @@ defmodule Forecaster.Application do
 
   def start(_type, _args) do
     children = [
-      {Forecaster, []}
+      Forecaster.Scraper,
+      Forecaster.Publisher,
+      Forecaster.Scheduler
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

@@ -1,6 +1,9 @@
 import Config
 
-config :hound, driver: "selenium", host: System.get_env("SELENIUM_HOST") || "127.0.0.1", port: System.get_env("SELENIUM_PORT") || 8910
+config :hound,
+  driver: "selenium",
+  host: System.get_env("SELENIUM_HOST") || "127.0.0.1",
+  port: System.get_env("SELENIUM_PORT") || 4444
 
 config :forecaster, :mqtt,
   host: System.get_env("MQTT_HOST") || "127.0.0.1",

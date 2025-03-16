@@ -5,7 +5,7 @@ defmodule Forecaster.MixProject do
     [
       app: :forecaster,
       version: "0.1.0",
-      elixir: "~> 1.14",
+      elixir: "~> 1.18",
       start_permanent: Mix.env() == :prod,
       deps: deps()
     ]
@@ -24,6 +24,7 @@ defmodule Forecaster.MixProject do
     [
       {:hound, "~> 1.1"},
       {:tortoise, "~> 0.10"},
+      {:quantum, "~> 3.0"},
       {:mox, "~> 1.0", only: :test},
       {:bypass, "~> 2.1", only: :test}
     ]
