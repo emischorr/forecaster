@@ -15,14 +15,15 @@ defmodule Forecaster.MixProject do
   def application do
     [
       mod: {Forecaster.Application, []},
-      extra_applications: [:logger, :hound]
+      extra_applications: [:logger]
     ]
   end
 
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:hound, "~> 1.1"},
+      {:req, "~> 0.5.10"},
+      {:floki, "~> 0.36.0"},
       {:tortoise, "~> 0.10"},
       {:quantum, "~> 3.0"},
       {:mox, "~> 1.0", only: :test},

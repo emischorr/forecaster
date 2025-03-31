@@ -1,5 +1,6 @@
 # build with: docker build -t emischorr/forecaster:latest .
-# run with: docker run -d --rm -e MQTT_HOST=$MQTT_HOST -e MQTT_USER=$MQTT_USER -e MQTT_PW=$MQTT_PW -e SELENIUM_HOST=$SELENIUM_HOST -e FORECAST_PLACE=$FORECAST_PLACE emischorr/forecaster:latest start
+#  or on mac: docker buildx build --platform=linux/amd64 --no-cache -t emischorr/forecaster:latest .
+# run with: docker run -d --rm -e MQTT_HOST=$MQTT_HOST -e MQTT_USER=$MQTT_USER -e MQTT_PW=$MQTT_PW -e FORECAST_PLACE=$FORECAST_PLACE emischorr/forecaster:latest start
 # push with: docker push emischorr/forecaster:latest
 
 ARG RELEASE_NAME=forecaster
@@ -76,7 +77,7 @@ RUN apk add --no-cache libstdc++ openssl ncurses-libs
 
 ENV USER="elixir"
 # exact locale doesn't matter, but en_US gives you temperatures in fahrenheit :-(
-ENV LANG de_DE.UTF-8
+ENV LANG=de_DE.UTF-8
 
 WORKDIR "/home/${USER}/app"
 
