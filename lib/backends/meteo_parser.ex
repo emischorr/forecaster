@@ -64,6 +64,25 @@ defmodule Forecaster.Backends.MeteoParser do
       |> Enum.map(&String.replace(&1, "°", ""))
       |> build_hourly_map(:temperature)
 
+    precip =
+      parsed_html
+      |> Floki.find("div.tab-detail.active #hourly_forecast tr.precip td span")
+      |> Enum.map(&content/1)
+      |> Enum.map(&String.replace(&1, ~r/^$/, "0"))
+      |> build_hourly_map(:precip)
+
+    precip_prop =
+      parsed_html
+      |> Floki.find("div.tab-detail.active #hourly_forecast tr.precip-prop td span")
+      |> Enum.map(&content/1)
+      |> build_hourly_map(:precip_prop)
+
+    humidity =
+      parsed_html
+      |> Floki.find("div.tab-detail.active #hourly_forecast tr.humidity td span")
+      |> Enum.map(&content/1)
+      |> build_hourly_map(:humidity)
+
     conditions =
       parsed_html
       |> Floki.find("div.tab-detail.active #hourly_forecast img.picon")
@@ -72,7 +91,11 @@ defmodule Forecaster.Backends.MeteoParser do
       end)
       |> build_hourly_map(:condition)
 
-    Map.merge(temps, conditions, fn _key, v1, v2 -> Map.merge(v1, v2) end)
+    temps
+    |> Map.merge(precip, fn _key, v1, v2 -> Map.merge(v1, v2) end)
+    |> Map.merge(precip_prop, fn _key, v1, v2 -> Map.merge(v1, v2) end)
+    |> Map.merge(humidity, fn _key, v1, v2 -> Map.merge(v1, v2) end)
+    |> Map.merge(conditions, fn _key, v1, v2 -> Map.merge(v1, v2) end)
   end
 
   defp check(nil, element) do
