@@ -13,4 +13,6 @@ config :forecaster, Forecaster.Scheduler,
     {"1 * * * *", {Forecaster.Publisher, :publish_current_hour, []}}
   ]
 
+config :elixir, :time_zone_database, Tzdata.TimeZoneDatabase
+
 import_config "#{config_env()}.exs"

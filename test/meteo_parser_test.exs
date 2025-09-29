@@ -2,8 +2,8 @@ defmodule MeteoParserTest do
   use ExUnit.Case
   alias Forecaster.Backends.MeteoParser
 
-  test "extract_forecast/1 parses weather data from HTML" do
-    html = File.read!("test/fixtures/weather.html")
+  test "extract_forecast/1 parses weather data from meteo HTML" do
+    html = File.read!("test/fixtures/meteo.html")
 
     result = MeteoParser.extract_forecast({:ok, html})
 

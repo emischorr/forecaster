@@ -44,14 +44,14 @@ defmodule Forecaster.Publisher do
   def handle_cast(:publish_current_hour, state) do
     Logger.info("Publishing current forecast measurement")
 
-    %Time{hour: hour} = Time.utc_now()
+    hour = timezone() |> DateTime.now!() |> Map.get(:hour)
 
     case Scraper.get_forecast(1) do
       {1, %{hour: %{^hour => forecast}}} ->
         publish_current_hour(forecast, state.mqtt_client)
         {:noreply, %{state | forecast_retry: false}}
 
-      nil ->
+      _else ->
         unless state.forecast_retry,
           do: Process.send_after(self(), :publish_current_hour, 60_000)
 
@@ -64,7 +64,7 @@ defmodule Forecaster.Publisher do
     Logger.info("Publishing daily forecast")
     Process.send_after(self(), :publish, update_interval())
 
-    Weather.forecast_range()
+    Weather.forecast_range(:meteo)
     |> Enum.map(&Scraper.get_forecast(&1))
     |> Enum.each(fn {day, forecast} ->
       publish_daily_forecast(forecast, day, state.mqtt_client)
@@ -89,5 +89,9 @@ defmodule Forecaster.Publisher do
 
   defp update_interval() do
     Application.get_env(:forecaster, :update_interval, :timer.hours(2))
+  end
+
+  defp timezone() do
+    Application.get_env(:forecaster, :timezone, "Europe/Berlin")
   end
 end

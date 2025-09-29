@@ -1,5 +1,5 @@
-defmodule Forecaster.Backends.Meteo do
-  alias Forecaster.Backends.MeteoParser
+defmodule Forecaster.Backends.Accuweather do
+  alias Forecaster.Backends.AccuweatherParser
 
   defmodule Host do
     @callback base_url() :: String.t()
@@ -7,30 +7,31 @@ defmodule Forecaster.Backends.Meteo do
 
   defmodule ProdHost do
     @behaviour Host
-    def base_url, do: "https://www.meteoblue.com/weather/week/"
+    def base_url, do: "https://www.accuweather.com/en/"
   end
 
   @spec forecast_range :: Range.t()
-  def forecast_range, do: 1..7
+  def forecast_range, do: 1..4
 
-  @spec forecast(String.t()) :: list({integer(), map()})
-  def forecast(place) do
+  @spec forecast({String.t(), String.t(), String.t()}) :: list({integer(), map()})
+  def forecast(place) when is_tuple(place) do
     forecast_range()
     |> Enum.map(&forecast_day(place, &1))
   end
 
-  @spec forecast_day(String.t(), integer()) :: {integer(), map()}
-  def forecast_day(place, day \\ 1) do
+  @spec forecast_day({String.t(), String.t(), String.t()}, integer()) :: {integer(), map()}
+  def forecast_day(place, day \\ 1) when is_tuple(place) do
     forecast =
       place
       |> url_for(day)
       |> fetch_html()
-      |> MeteoParser.extract_forecast()
+      |> AccuweatherParser.extract_forecast()
 
     {day, forecast}
   end
 
-  defp url_for(loc_id, day), do: "#{host().base_url()}#{loc_id}?day=#{day}"
+  defp url_for({country, loc_name, loc_id}, day),
+    do: "#{host().base_url()}#{country}/#{loc_name}/hourly-weather-forecast/#{loc_id}?day=#{day}"
 
   defp fetch_html(url) do
     Req.new(url: url, compress_body: true)
@@ -44,20 +45,10 @@ defmodule Forecaster.Backends.Meteo do
     )
     |> Req.Request.put_header("Accept-Language", "en-US;q=0.7,en;q=0.3")
     |> Req.Request.put_header("Connection", "keep-alive")
-    |> Req.Request.put_header(
-      "Cookie",
-      "locale=en_US; darkmode=true; speed=METER_PER_SECOND; extendview=true; mb=26uv0n6hj6lehh6bqva2ajo07p"
-    )
-    |> Req.Request.put_header("Upgrade-Insecure-Requests", "1")
-    |> Req.Request.put_header("Sec-Fetch-Dest", "document")
-    |> Req.Request.put_header("Sec-Fetch-Mode", "navigate")
-    |> Req.Request.put_header("Sec-Fetch-Site", "same-origin")
-    |> Req.Request.put_header("Sec-Fetch-User", "?1")
-    |> Req.Request.put_header("Priority", "u=0, i")
     |> Req.get()
     |> handle_response()
 
-    # |> write_to_file("weather.html")
+    # |> write_to_file("accuweather.html")
   end
 
   defp handle_response({:ok, %Req.Response{status: 200, body: body}}), do: {:ok, body}
