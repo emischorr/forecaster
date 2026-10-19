@@ -1,19 +1,12 @@
-version: "3.7"
+name: forecaster
 services:
-  forecaster:
-    image: emischorr/forecaster:latest
-    restart: unless-stopped
+
+  mosquitto:
+    image: eclipse-mosquitto:2.0.20
     ports:
-      - "4000:4000"
+      - "1883:1883" #default mqtt port
+      - "9001:9001" #default mqtt port for websockets
     volumes:
-      # holds pv_forecast_ensemble.bin (trained with `mix pv.train`)
-      - ./data:/data:ro
-    environment:
-      - FORECAST_PLACE=
-      - FORECAST_COUNTRY=
-      - FORECAST_PLACE_NAME=
-      - FORECAST_PLACE_ID=
-      - MQTT_HOST=
-      - MQTT_PORT=1883
-      - MQTT_USER=
-      - MQTT_PW=
+      - .docker/mosquitto/config:/mosquitto/config:rw
+      - .docker/mosquitto/data:/mosquitto/data:rw
+      - .docker/mosquitto/log:/mosquitto/log:rw

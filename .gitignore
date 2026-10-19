@@ -38,3 +38,4 @@ forecaster-*.tar
 
 .DS_Store
 .elixir_ls/
+.docker

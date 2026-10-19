@@ -24,16 +24,18 @@ RUN apk add --no-cache build-base git python3 curl
 # sets work dir
 WORKDIR /app
 
+# Needed for cross platform builds with newer erlang (27+). Also prevent Erlang from trying to initialize a TTY during the build
+# see: https://elixirforum.com/t/mix-deps-get-memory-explosion-when-doing-cross-platform-docker-build/57157/3
+ENV ERL_FLAGS="-noinput +JPperf true"
+
 # install hex + rebar
 RUN mix local.hex --force && \
   mix local.rebar --force
 
 # redeclare it as it is lost after the FROM above
 ARG MIX_ENV
+ARG RELEASE_NAME
 ENV MIX_ENV="${MIX_ENV}"
-# needed for cross platform builds with new erlang.
-# see: https://elixirforum.com/t/mix-deps-get-memory-explosion-when-doing-cross-platform-docker-build/57157/3
-ENV ERL_FLAGS="+JPperf true"
 
 # install mix dependencies
 COPY mix.exs mix.lock ./
@@ -47,13 +49,6 @@ COPY config/config.exs config/$MIX_ENV.exs config/
 
 # compile dependencies
 RUN mix deps.compile
-
-# copy assets
-#COPY priv priv
-#COPY assets assets
-
-# Compile assets
-#RUN mix assets.deploy
 
 # compile project
 COPY apps/forecaster/lib apps/forecaster/lib
@@ -76,7 +71,7 @@ ARG RELEASE_NAME
 ARG MIX_ENV
 
 # install runtime dependencies
-RUN apk add --no-cache libstdc++ openssl ncurses-libs
+RUN apk add --no-cache libstdc++ openssl ncurses-libs ca-certificates
 
 ENV USER="elixir"
 # exact locale doesn't matter, but en_US gives you temperatures in fahrenheit :-(
