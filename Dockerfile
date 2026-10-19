@@ -1,13 +1,13 @@
 # build with: docker build -t emischorr/forecaster:latest .
 #  or on mac: docker buildx build --platform=linux/amd64 --no-cache -t emischorr/forecaster:latest .
-# run with: docker run -d --rm -e MQTT_HOST=$MQTT_HOST -e MQTT_USER=$MQTT_USER -e MQTT_PW=$MQTT_PW -e FORECAST_PLACE=$FORECAST_PLACE emischorr/forecaster:latest start
+# run with: docker run -d --rm -p 4000:4000 -v $PWD/data:/data -e MQTT_HOST=$MQTT_HOST -e MQTT_USER=$MQTT_USER -e MQTT_PW=$MQTT_PW -e FORECAST_PLACE=$FORECAST_PLACE emischorr/forecaster:latest start
 # push with: docker push emischorr/forecaster:latest
 
 ARG RELEASE_NAME=forecaster
 
-ARG ELIXIR_VERSION="1.18.2"
-ARG ERLANG_VERSION="27.2"
-ARG ALPINE_VERSION="3.21.2"
+ARG ELIXIR_VERSION="1.20.3"
+ARG ERLANG_VERSION="28.5.0.5"
+ARG ALPINE_VERSION="3.23.5"
 
 ARG BUILDER_IMAGE="hexpm/elixir:${ELIXIR_VERSION}-erlang-${ERLANG_VERSION}-alpine-${ALPINE_VERSION}"
 ARG RUNNER_IMAGE="alpine:${ALPINE_VERSION}"
@@ -37,6 +37,8 @@ ENV ERL_FLAGS="+JPperf true"
 
 # install mix dependencies
 COPY mix.exs mix.lock ./
+COPY apps/forecaster/mix.exs apps/forecaster/
+COPY apps/pv_forecast/mix.exs apps/pv_forecast/
 RUN mix deps.get --only $MIX_ENV
 
 # copy compile configuration files
@@ -54,7 +56,8 @@ RUN mix deps.compile
 #RUN mix assets.deploy
 
 # compile project
-COPY lib lib
+COPY apps/forecaster/lib apps/forecaster/lib
+COPY apps/pv_forecast/lib apps/pv_forecast/lib
 RUN mix compile
 
 # copy runtime configuration file
@@ -78,6 +81,8 @@ RUN apk add --no-cache libstdc++ openssl ncurses-libs
 ENV USER="elixir"
 # exact locale doesn't matter, but en_US gives you temperatures in fahrenheit :-(
 ENV LANG=de_DE.UTF-8
+# trained PV model, mount it as a volume (see docker-compose.yml)
+ENV MODEL_PATH=/data/pv_forecast_ensemble.bin
 
 WORKDIR "/home/${USER}/app"
 
@@ -99,6 +104,9 @@ USER "${USER}"
 
 # copy release executables
 COPY --from=builder --chown="${USER}":"${USER}" /app/_build/"${MIX_ENV}"/rel/"${RELEASE_NAME}" ./
+
+# PV forecast HTTP API
+EXPOSE 4000
 
 ENTRYPOINT ["bin/forecaster"]
 
