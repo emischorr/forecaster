@@ -33,8 +33,10 @@ defmodule Forecaster.Backends.Accuweather do
   defp url_for({country, loc_name, loc_id}, day),
     do: "#{host().base_url()}#{country}/#{loc_name}/hourly-weather-forecast/#{loc_id}?day=#{day}"
 
+  # The site's bot protection (Akamai) only lets the request through with HTTP/2
+  # and the Sec-Fetch-* navigation headers a browser sends
   defp fetch_html(url) do
-    Req.new(url: url, compress_body: true)
+    Req.new(url: url, compress_body: true, connect_options: [protocols: [:http2]])
     |> Req.Request.put_header(
       "User-Agent",
       "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:136.0) Gecko/20100101 Firefox/136.0"
@@ -44,7 +46,11 @@ defmodule Forecaster.Backends.Accuweather do
       "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
     )
     |> Req.Request.put_header("Accept-Language", "en-US;q=0.7,en;q=0.3")
-    |> Req.Request.put_header("Connection", "keep-alive")
+    |> Req.Request.put_header("Upgrade-Insecure-Requests", "1")
+    |> Req.Request.put_header("Sec-Fetch-Dest", "document")
+    |> Req.Request.put_header("Sec-Fetch-Mode", "navigate")
+    |> Req.Request.put_header("Sec-Fetch-Site", "none")
+    |> Req.Request.put_header("Sec-Fetch-User", "?1")
     |> Req.get()
     |> handle_response()
 
