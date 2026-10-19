@@ -7,6 +7,7 @@ defmodule Forecaster.Application do
 
   def start(_type, _args) do
     children = [
+      Forecaster.Events,
       Forecaster.Scraper,
       Forecaster.Publisher,
       Forecaster.Scheduler
