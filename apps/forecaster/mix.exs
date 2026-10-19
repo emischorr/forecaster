@@ -28,7 +28,7 @@ defmodule Forecaster.MixProject do
     [
       {:req, "~> 0.5.10"},
       {:floki, "~> 0.36.0"},
-      {:tortoise, "~> 0.10"},
+      {:mqtt, in_umbrella: true},
       {:quantum, "~> 3.0"},
       {:tzdata, "~> 1.1"}
     ]

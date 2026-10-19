@@ -9,6 +9,7 @@ defmodule PvForecast.Model do
 
   @current_model_version "1.0.0"
   @compatible_versions ["1.0.0"]
+  @model_config %{type: "pv_forecast", features: 4}
 
   # Data preprocessing
   def prepare_data(raw_data) do
@@ -181,7 +182,7 @@ defmodule PvForecast.Model do
       # Version and compatibility info
       model_version: model_version,
       compatible_versions: @compatible_versions,
-      model_config: %{type: "pv_forecast", features: 4},
+      model_config: @model_config,
       # Copy params off the EXLA device, otherwise only buffer references get serialized
       params: Nx.backend_copy(trained_model.params, Nx.BinaryBackend),
       metadata: %{
@@ -201,8 +202,12 @@ defmodule PvForecast.Model do
   end
 
   # Load trained model from disk
+  #
+  # Options:
+  #   - strict_validation: When true (default), a model saved with an incompatible
+  #     version or feature configuration is rejected. When false, it is loaded
+  #     anyway and a warning is logged (e.g. to migrate an old model).
   def load_model(filepath, opts \\ []) do
-    # TODO use the strict_validation option below to validate the model
     strict_validation = Keyword.get(opts, :strict_validation, true)
 
     case File.read(filepath) do
@@ -210,21 +215,47 @@ defmodule PvForecast.Model do
         try do
           serializable_model = :erlang.binary_to_term(binary_data)
 
-          trained_model = %{
-            # Reconstruct the model
-            model: build_model(),
-            params: serializable_model.params,
-            metadata: serializable_model.metadata,
-            model_version: serializable_model.model_version
-          }
+          with :ok <- validate_model(serializable_model, strict_validation) do
+            trained_model = %{
+              # Reconstruct the model
+              model: build_model(),
+              params: serializable_model.params,
+              metadata: serializable_model.metadata,
+              model_version: serializable_model.model_version
+            }
 
-          {:ok, trained_model}
+            {:ok, trained_model}
+          end
         rescue
           error -> {:error, "Failed to deserialize model: #{inspect(error)}"}
         end
 
       {:error, reason} ->
         {:error, "Failed to read model file: #{reason}"}
+    end
+  end
+
+  # Missing keys are always an error, version/config mismatches only when strict
+  defp validate_model(serializable_model, strict_validation) do
+    required_keys = [:params, :metadata, :model_version]
+
+    case Enum.reject(required_keys, &is_map_key(serializable_model, &1)) do
+      [] ->
+        problems =
+          [
+            if serializable_model.model_version not in @compatible_versions do
+              "version #{inspect(serializable_model.model_version)} is not one of #{inspect(@compatible_versions)}"
+            end,
+            if Map.get(serializable_model, :model_config) != @model_config do
+              "model config #{inspect(Map.get(serializable_model, :model_config))} does not match #{inspect(@model_config)}"
+            end
+          ]
+          |> Enum.reject(&is_nil/1)
+
+        Utils.check_compatibility("model", problems, strict_validation)
+
+      missing ->
+        {:error, "Invalid model file, missing #{inspect(missing)}"}
     end
   end
 

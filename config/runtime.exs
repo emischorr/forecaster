@@ -1,13 +1,15 @@
 import Config
 
-# -- forecaster (weather) -----------------------------------------------------
+# -- mqtt -----------------------------------------------------------------------
 
-config :forecaster, :mqtt,
+config :mqtt,
   host: System.get_env("MQTT_HOST") || "127.0.0.1",
   port: String.to_integer(System.get_env("MQTT_PORT") || "1883"),
   username: System.get_env("MQTT_USER") || nil,
   password: System.get_env("MQTT_PW") || nil,
   namespace: System.get_env("MQTT_NAMESPACE") || "home/get/forecast"
+
+# -- forecaster (weather) -----------------------------------------------------
 
 config :forecaster, :meteo, place: System.get_env("FORECAST_PLACE") || "berlin_germany_2950159"
 
@@ -19,6 +21,8 @@ config :forecaster, :accuweather,
 config :forecaster, timezone: System.get_env("TZ") || "Europe/Berlin"
 
 # -- pv_forecast ----------------------------------------------------------------
+
+config :pv_forecast, timezone: System.get_env("TZ") || "Europe/Berlin"
 
 if model_path = System.get_env("MODEL_PATH") do
   config :pv_forecast, model_path: model_path

@@ -2,7 +2,7 @@ defmodule PvForecast.Publisher do
   @moduledoc """
   Publishes the PV production forecast next to the weather forecast.
 
-  Subscribes to the `:forecast_updated` event of the `:forecaster` app. On every
+  Subscribes to the forecast updates of the `:forecaster` app. On every
   weather update it predicts the daily production for all days with weather data
   and publishes it under the same day topic as the weather:
 
@@ -17,7 +17,6 @@ defmodule PvForecast.Publisher do
   use GenServer
   require Logger
 
-  alias Forecaster.Events
   alias PvForecast.Model
   alias PvForecast.ModelServer
   alias PvForecast.WeatherInput
@@ -70,25 +69,19 @@ defmodule PvForecast.Publisher do
 
   @impl true
   def init(opts) do
-    Events.subscribe(:forecast_updated)
+    Forecaster.subscribe()
 
-    {:ok,
-     %{
-       model_server: Keyword.get(opts, :model_server, ModelServer),
-       forecasts_fn: Keyword.get(opts, :forecasts_fn, &Forecaster.Scraper.get_forecasts/0),
-       publish_fn: Keyword.get(opts, :publish_fn, &Forecaster.Publisher.publish_daily/3),
-       today_fn: Keyword.get(opts, :today_fn, &today/0)
-     }}
+    {:ok, %{model_server: Keyword.get(opts, :model_server, ModelServer)}}
   end
 
   @impl true
-  def handle_info({Events, :forecast_updated}, state) do
-    case forecast(state.forecasts_fn.(), state.today_fn.(), state.model_server) do
+  def handle_info({Forecaster, :forecast_updated, forecasts}, state) do
+    case forecast(forecasts, today(), state.model_server) do
       {:ok, predictions} ->
         Logger.info("Publishing PV forecast for #{length(predictions)} days")
 
         for {day, values} <- predictions, {key, value} <- values do
-          state.publish_fn.(day, key, value)
+          MQTT.publish("#{day}/#{key}", value)
         end
 
       {:error, reason} ->
@@ -99,7 +92,7 @@ defmodule PvForecast.Publisher do
   end
 
   defp today do
-    :forecaster
+    :pv_forecast
     |> Application.get_env(:timezone, "Europe/Berlin")
     |> DateTime.now!()
     |> DateTime.to_date()

@@ -2,7 +2,7 @@ defmodule Forecaster.Scraper do
   @moduledoc """
   This module is GenServer responsible to get (scrap) the data from the weather website in fixed intervals.
   Reports are saved into an ETS table to give access to other processes.
-  After each update a `:forecast_updated` event is broadcast via `Forecaster.Events`.
+  After each update a `:forecast_updated` event with all stored days is broadcast via `Forecaster.Events`.
   """
   use GenServer
   require Logger
@@ -66,7 +66,7 @@ defmodule Forecaster.Scraper do
     |> save()
 
     Logger.info("Forecast saved")
-    Events.broadcast(:forecast_updated)
+    Events.broadcast(:forecast_updated, get_forecasts())
   end
 
   defp merge_forecast(fc_one, fc_two) do

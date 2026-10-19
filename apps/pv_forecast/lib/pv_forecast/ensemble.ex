@@ -8,8 +8,10 @@ defmodule PvForecast.Ensemble do
   """
 
   alias PvForecast.Model
+  alias PvForecast.Utils
 
   @current_ensemble_version "1.0.0"
+  @compatible_versions ["1.0.0"]
 
   # Configuration for different models in the ensemble
   @ensemble_configs [
@@ -312,9 +314,13 @@ defmodule PvForecast.Ensemble do
 
   @doc """
   Loads a trained ensemble from disk.
+
+  Options:
+    - strict_validation: When true (default), an ensemble saved with an incompatible
+      version or an inconsistent model count is rejected. When false, it is loaded
+      anyway and a warning is logged.
   """
   def load_ensemble(filepath, opts \\ []) do
-    # TODO use the strict_validation option below to validate the model
     strict_validation = Keyword.get(opts, :strict_validation, true)
 
     case File.read(filepath) do
@@ -322,23 +328,25 @@ defmodule PvForecast.Ensemble do
         try do
           serializable_ensemble = :erlang.binary_to_term(binary_data)
 
-          # Reconstruct the ensemble
-          models =
-            Enum.map(serializable_ensemble.models, fn serialized_model ->
-              %{
-                name: serialized_model.name,
-                model: build_model_with_config(serialized_model.config),
-                params: serialized_model.params,
-                config: serialized_model.config
-              }
-            end)
+          with :ok <- validate_ensemble(serializable_ensemble, strict_validation) do
+            # Reconstruct the ensemble
+            models =
+              Enum.map(serializable_ensemble.models, fn serialized_model ->
+                %{
+                  name: serialized_model.name,
+                  model: build_model_with_config(serialized_model.config),
+                  params: serialized_model.params,
+                  config: serialized_model.config
+                }
+              end)
 
-          ensemble = %{
-            models: models,
-            metadata: serializable_ensemble.metadata
-          }
+            ensemble = %{
+              models: models,
+              metadata: serializable_ensemble.metadata
+            }
 
-          {:ok, ensemble}
+            {:ok, ensemble}
+          end
         rescue
           error -> {:error, "Failed to deserialize ensemble: #{inspect(error)}"}
         end
@@ -346,6 +354,30 @@ defmodule PvForecast.Ensemble do
       {:error, reason} ->
         {:error, "Failed to read ensemble file: #{reason}"}
     end
+  end
+
+  # Unbuildable models are always an error, version/size mismatches only when strict
+  defp validate_ensemble(%{version: version, models: [_ | _] = models} = serialized, strict) do
+    if Enum.all?(models, &match?(%{config: %{hidden_layers: _, dropout_rate: _}}, &1)) do
+      problems =
+        [
+          if version not in @compatible_versions do
+            "version #{inspect(version)} is not one of #{inspect(@compatible_versions)}"
+          end,
+          if Map.get(serialized, :ensemble_size) != length(models) do
+            "ensemble size #{inspect(Map.get(serialized, :ensemble_size))} does not match #{length(models)} saved models"
+          end
+        ]
+        |> Enum.reject(&is_nil/1)
+
+      Utils.check_compatibility("ensemble", problems, strict)
+    else
+      {:error, "Invalid ensemble file, model config without hidden_layers/dropout_rate"}
+    end
+  end
+
+  defp validate_ensemble(_serialized, _strict) do
+    {:error, "Invalid ensemble file, missing version or models"}
   end
 
   # Build model with custom configuration

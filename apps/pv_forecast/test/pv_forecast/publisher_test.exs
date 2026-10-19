@@ -16,20 +16,13 @@ defmodule PvForecast.PublisherTest do
   ]
 
   setup do
-    test_pid = self()
-
     model_server =
       start_supervised!({ModelServer, path: TestFixtures.ensemble_path(), name: nil}, id: :model)
 
-    publisher_opts = [
-      name: nil,
-      model_server: model_server,
-      forecasts_fn: fn -> @forecasts end,
-      today_fn: fn -> @today end,
-      publish_fn: fn day, key, value -> send(test_pid, {:published, day, key, value}) end
-    ]
+    # The MQTT connection is disabled in tests, so the test receives the publish casts.
+    Process.register(self(), MQTT.Connection)
 
-    %{model_server: model_server, publisher_opts: publisher_opts}
+    %{model_server: model_server, publisher_opts: [name: nil, model_server: model_server]}
   end
 
   test "forecast/3 predicts all days with complete weather data", %{model_server: server} do
@@ -41,26 +34,30 @@ defmodule PvForecast.PublisherTest do
   end
 
   test "publishes the PV forecast under the day topic on weather updates", ctx do
-    start_supervised!({Publisher, ctx.publisher_opts})
+    publisher = start_supervised!({Publisher, ctx.publisher_opts})
 
     capture_log(fn ->
-      Forecaster.Events.broadcast(:forecast_updated)
+      send(publisher, {Forecaster, :forecast_updated, @forecasts})
 
-      for day <- [1, 2], key <- [:pv_production, :pv_production_min, :pv_production_max] do
-        assert_receive {:published, ^day, ^key, value} when is_float(value), 5_000
+      for day <- [1, 2], key <- ["pv_production", "pv_production_min", "pv_production_max"] do
+        subtopic = "#{day}/#{key}"
+        assert_receive {:"$gen_cast", {:publish, ^subtopic, value}}, 5_000
+        assert {_, ""} = Float.parse(value)
       end
 
-      refute_received {:published, 3, _, _}
+      refute_received {:"$gen_cast", {:publish, "3/" <> _, _}}
     end)
   end
 
   test "publishes nothing while the model is not ready", ctx do
     capture_log(fn ->
       server = start_supervised!({ModelServer, path: "tmp/test/nope.bin", name: nil}, id: :empty)
-      start_supervised!({Publisher, Keyword.put(ctx.publisher_opts, :model_server, server)})
 
-      Forecaster.Events.broadcast(:forecast_updated)
-      refute_receive {:published, _, _, _}, 500
+      publisher =
+        start_supervised!({Publisher, Keyword.put(ctx.publisher_opts, :model_server, server)})
+
+      send(publisher, {Forecaster, :forecast_updated, @forecasts})
+      refute_receive {:"$gen_cast", {:publish, _, _}}, 500
     end)
   end
 end

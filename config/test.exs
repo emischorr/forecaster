@@ -4,6 +4,7 @@ config :logger, level: :warning
 
 # Tests must not scrape the weather sites or connect to MQTT
 config :forecaster, scraper_enabled: false, publish_enabled: false
+config :mqtt, enabled: false
 
 config :nx, :default_backend, EXLA.Backend
 

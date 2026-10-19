@@ -9,7 +9,7 @@ defmodule Forecaster.Umbrella.MixProject do
       deps: deps(),
       releases: [
         forecaster: [
-          applications: [forecaster: :permanent, pv_forecast: :permanent],
+          applications: [mqtt: :permanent, forecaster: :permanent, pv_forecast: :permanent],
           include_executables_for: [:unix]
         ]
       ]

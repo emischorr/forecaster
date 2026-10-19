@@ -8,8 +8,9 @@ Useful for smart home automations or anything else that requires a weather or PV
 | -------------------- | ----------------------------------------------------------------------------- |
 | `apps/forecaster`    | Scrapes the weather forecast (meteoblue + AccuWeather) and publishes it       |
 | `apps/pv_forecast`   | Neural network ensemble (Nx/Axon) predicting daily PV production + HTTP API   |
+| `apps/mqtt`          | Connection to the MQTT broker, used by both apps to publish                   |
 
-Both apps run in one release. Every 2 hours the weather forecast is updated and published.
+All apps run in one release. Every 2 hours the weather forecast is updated and published.
 Each update triggers the PV forecast for all days with weather data, published under the same day topic.
 
 ## Weather backends

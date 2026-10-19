@@ -39,6 +39,7 @@ ENV MIX_ENV="${MIX_ENV}"
 
 # install mix dependencies
 COPY mix.exs mix.lock ./
+COPY apps/mqtt/mix.exs apps/mqtt/
 COPY apps/forecaster/mix.exs apps/forecaster/
 COPY apps/pv_forecast/mix.exs apps/pv_forecast/
 RUN mix deps.get --only $MIX_ENV
@@ -51,6 +52,7 @@ COPY config/config.exs config/$MIX_ENV.exs config/
 RUN mix deps.compile
 
 # compile project
+COPY apps/mqtt/lib apps/mqtt/lib
 COPY apps/forecaster/lib apps/forecaster/lib
 COPY apps/pv_forecast/lib apps/pv_forecast/lib
 RUN mix compile

@@ -27,6 +27,7 @@ defmodule PvForecast.MixProject do
   defp deps do
     [
       {:forecaster, in_umbrella: true},
+      {:mqtt, in_umbrella: true},
       {:nx, "~> 0.10"},
       # Only needed for training; inference in prod runs on Nx.Defn.Evaluator
       {:exla, "~> 0.10", only: [:dev, :test]},
