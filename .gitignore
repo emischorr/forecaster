@@ -30,3 +30,11 @@ forecaster-*.tar
 .iex.exs
 
 .envrc
+
+# Personal training data and trained models stay out of git
+/data/
+*.bin
+*.bin.old
+
+.DS_Store
+.elixir_ls/
