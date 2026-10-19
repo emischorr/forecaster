@@ -30,9 +30,7 @@ defmodule Forecaster.MixProject do
       {:floki, "~> 0.36.0"},
       {:tortoise, "~> 0.10"},
       {:quantum, "~> 3.0"},
-      {:tzdata, "~> 1.1"},
-      {:mox, "~> 1.0", only: :test},
-      {:bypass, "~> 2.1", only: :test}
+      {:tzdata, "~> 1.1"}
     ]
   end
 end

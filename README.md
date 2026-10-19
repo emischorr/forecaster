@@ -102,8 +102,33 @@ docker run -d -p 4000:4000 -v $PWD/data:/data:ro \
   -e FORECAST_PLACE="berlin_germany_2950159" emischorr/forecaster:latest start
 ```
 
-or fill in `docker-compose.yml` and run `docker compose up -d`.
+or use the compose file in `deployment/`: fill in the environment variables in
+`deployment/docker-compose.yml`, put the model file in `deployment/data/` (mounted as `/data`) and run
+
+```sh
+docker compose -f deployment/docker-compose.yml up -d
+```
+
 Without a model file in the mounted `data` dir the weather is still published, the PV forecast is skipped.
+
+### Local development
+
+The `docker-compose.yml` in the root dir only starts a Mosquitto broker (port 1883, websockets on 9001)
+to develop against, with its config, data and log under `.docker/mosquitto/`.
+Mosquitto 2 only accepts local connections without a config, so create
+`.docker/mosquitto/config/mosquitto.conf`, e.g.:
+
+```
+listener 1883
+allow_anonymous true
+```
+
+Then start the broker and the apps (`MQTT_HOST` defaults to `127.0.0.1`):
+
+```sh
+docker compose up -d
+iex -S mix
+```
 
 ## Usage
 
@@ -122,3 +147,20 @@ iex> Forecaster.Weather.forecast("a_place_1234567")
 iex> Forecaster.Scraper.get_forecasts() |> PvForecast.Publisher.forecast(Date.utc_today())
 {:ok, [{1, %{pv_production: 6.1, pv_production_min: 5.4, pv_production_max: 6.9}}, ...]}
 ```
+
+To query the PV model for any day + weather combination (like the HTTP API), build the features
+and ask the running model server. Results are in kWh, one value per day in input order:
+
+```elixir
+iex> days = [
+...>   %{date: ~D[2026-06-21], max_temp: 26.0, sunshine_hours: 14.0, rain_mm: 0.0},
+...>   %{date: ~D[2026-12-21], max_temp: 3.0, sunshine_hours: 1.5, rain_mm: 4.2}
+...> ]
+iex> days |> Enum.map(&PvForecast.Model.features/1) |> Nx.tensor(type: :f32) |> PvForecast.ModelServer.predict()
+{:ok, %{mean: [32.34, 2.59], min: [27.77, 2.06], max: [36.12, 3.01]}}
+
+iex> PvForecast.ModelServer.info()
+%{status: :ready, path: "data/pv_forecast_ensemble.bin", metadata: %{...}, loaded_at: ~U[...]}
+```
+
+Without a loaded model `predict/1` returns `{:error, :not_ready}`.
